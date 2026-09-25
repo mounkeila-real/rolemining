@@ -1,4 +1,5 @@
-node_modules/
-dist/
-.astro/
 *.log
+.astro/
+.claude/
+dist/
+node_modules/

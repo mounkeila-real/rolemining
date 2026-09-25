@@ -155,6 +155,9 @@ const description =
             <button type="button" class="onglet" role="tab" data-onglet="ecarts" aria-selected="false">
               Écarts <b data-compte-ecarts></b>
             </button>
+            <button type="button" class="onglet" role="tab" data-onglet="donnees" aria-selected="false">
+              Données
+            </button>
           </div>
 
           <section data-panneau="synthese" data-charge="Chargement du jeu de données…">
@@ -219,6 +222,72 @@ const description =
                 <p>Indépendants des seuils : ils n'attendent pas une recommandation</p>
               </div>
               <div class="tableau" data-table-ecarts></div>
+            </div>
+          </section>
+          <section data-panneau="donnees" hidden>
+            <div class="carte">
+              <div class="carte__entete">
+                <h3>Jeu de données chargé</h3>
+                <p data-origine-jeu></p>
+                <div class="carte__outils">
+                  <button type="button" class="mini" data-jeu-demo hidden>
+                    Revenir au jeu de démonstration
+                  </button>
+                </div>
+              </div>
+              <div class="chiffres" data-chiffres-jeu></div>
+            </div>
+
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
+                <h3>Charger votre propre extraction</h3>
+                <p>
+                  Les fichiers sont lus par votre navigateur et n'en sortent pas :
+                  il n'y a pas de serveur à qui les envoyer.
+                </p>
+              </div>
+
+              <div class="import">
+                <div class="import__fichiers">
+                  <label class="fichier">
+                    <span>Annuaire <em>obligatoire</em></span>
+                    <input type="file" accept=".csv,.txt,text/csv" data-fichier="annuaire" />
+                    <small data-etat="annuaire">Un export avec un identifiant, un
+                    service, une fonction, un site et un responsable.</small>
+                  </label>
+                  <label class="fichier">
+                    <span>Habilitations <em>obligatoire</em></span>
+                    <input type="file" accept=".csv,.txt,text/csv" data-fichier="habilitations" />
+                    <small data-etat="habilitations">Deux colonnes : qui, et quel accès.</small>
+                  </label>
+                  <label class="fichier">
+                    <span>Catalogue <em>facultatif</em></span>
+                    <input type="file" accept=".csv,.txt,text/csv" data-fichier="catalogue" />
+                    <small data-etat="catalogue">Libellés, sensibilité, interdiction
+                    aux prestataires. Sans lui, tous les accès sont traités comme
+                    ordinaires.</small>
+                  </label>
+                </div>
+
+                <div data-mappage></div>
+                <div data-prestataires-import></div>
+
+                <div class="import__actions">
+                  <button type="button" class="mini mini--fort" data-charger disabled>
+                    Analyser et charger
+                  </button>
+                </div>
+
+                <div data-diagnostics></div>
+              </div>
+            </div>
+
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
+                <h3>Catalogue des accès</h3>
+                <p data-compte-catalogue></p>
+              </div>
+              <div class="tableau" data-table-catalogue></div>
             </div>
           </section>
         </main>

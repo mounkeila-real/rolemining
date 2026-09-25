@@ -17,6 +17,16 @@ import {
   type Verdict,
   type Violation,
 } from '../moteur';
+import { parser, type Tableau } from '../moteur/csv';
+import {
+  construire as construireDepuisCsv,
+  detecterAnnuaire,
+  detecterHabilitations,
+  devinerPrestataires,
+  type Correspondance,
+  type CorrespondanceHabilitations,
+  type Diagnostic,
+} from '../moteur/importation';
 
 /* ------------------------------------------------------------------ outils -- */
 
@@ -354,6 +364,310 @@ function rendreEcarts(et: Etat): void {
     </table>`;
 }
 
+/* ------------------------------------------------------- import de données -- */
+
+/**
+ * Chargement d'une extraction du client. Les fichiers sont lus par le navigateur
+ * et ne partent nulle part — il n'y a pas de serveur à qui les envoyer.
+ *
+ * La détection des colonnes est proposée, jamais imposée : se tromper en silence
+ * sur la colonne « responsable » fausserait toute la hiérarchie, donc la
+ * correspondance reste affichée et modifiable avant le chargement.
+ */
+
+const CHAMPS_ANNUAIRE: [keyof Correspondance, string, boolean][] = [
+  ['identifiant', 'Identifiant', true],
+  ['nom', 'Nom affiché', false],
+  ['departement', 'Service ou département', false],
+  ['titre', 'Fonction', false],
+  ['site', 'Site', false],
+  ['responsable', 'Responsable', false],
+  ['dn', 'Nom distinctif (DN)', false],
+];
+
+const fichiers: { annuaire?: Tableau; habilitations?: Tableau; catalogue?: Tableau } = {};
+let mapAnnuaire: Correspondance | null = null;
+let mapHabilitations: CorrespondanceHabilitations | null = null;
+const prestatairesImport = new Set<string>();
+let jeuDemo: Jeu | null = null;
+let origineJeu = 'Jeu de démonstration — organisation Contoso francisée, habilitations générées';
+
+function optionsColonnes(entetes: string[], choisi: string, obligatoire: boolean): string {
+  const vide = obligatoire ? '' : `<option value=""${choisi ? '' : ' selected'}>— absente —</option>`;
+  return (
+    vide +
+    entetes
+      .map((h) => `<option value="${e(h)}"${h === choisi ? ' selected' : ''}>${e(h)}</option>`)
+      .join('')
+  );
+}
+
+function rendreMappage(): void {
+  const cible = q('[data-mappage]');
+  if (!fichiers.annuaire || !mapAnnuaire) {
+    cible.innerHTML = '';
+    return;
+  }
+
+  const annuaire = fichiers.annuaire;
+  const m = mapAnnuaire;
+  const blocHab =
+    fichiers.habilitations && mapHabilitations
+      ? `<div>
+           <p class="mappage__t">Colonnes des habilitations</p>
+           <div class="mappage__grille">
+             <label>Agent
+               <select data-maph="agent"${mapHabilitations.agent ? '' : ' data-manquant'}>
+                 ${optionsColonnes(fichiers.habilitations.entetes, mapHabilitations.agent, true)}
+               </select>
+             </label>
+             <label>Accès
+               <select data-maph="acces"${mapHabilitations.acces ? '' : ' data-manquant'}>
+                 ${optionsColonnes(fichiers.habilitations.entetes, mapHabilitations.acces, true)}
+               </select>
+             </label>
+           </div>
+         </div>`
+      : '';
+
+  cible.innerHTML = `
+    <div class="mappage">
+      <div>
+        <p class="mappage__t">Colonnes de l'annuaire — corrigez si la détection s'est trompée</p>
+        <div class="mappage__grille">
+          ${CHAMPS_ANNUAIRE.map(
+            ([champ, libelle, obligatoire]) => `
+            <label>${e(libelle)}${obligatoire ? ' *' : ''}
+              <select data-map="${champ}"${obligatoire && !m[champ] ? ' data-manquant' : ''}>
+                ${optionsColonnes(annuaire.entetes, m[champ], obligatoire)}
+              </select>
+            </label>`,
+          ).join('')}
+        </div>
+      </div>
+      ${blocHab}
+    </div>`;
+}
+
+function rendrePrestatairesImport(): void {
+  const cible = q('[data-prestataires-import]');
+  if (!fichiers.annuaire || !mapAnnuaire?.departement) {
+    cible.innerHTML = '';
+    return;
+  }
+
+  const colonne = mapAnnuaire.departement;
+  const departements = [
+    ...new Set(fichiers.annuaire.lignes.map((l) => (l[colonne] ?? '').trim()).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, 'fr'));
+
+  cible.innerHTML = `
+    <div class="mappage">
+      <p class="mappage__t">Quels services sont de la prestation ?</p>
+      <div class="pastilles">
+        ${departements
+          .map(
+            (d) =>
+              `<button type="button" class="pastille" data-presta-import="${e(d)}" aria-pressed="${prestatairesImport.has(d)}">${e(d)}</button>`,
+          )
+          .join('')}
+      </div>
+      <p class="aide" style="margin:0">
+        Leurs membres seront écartés du minage par défaut, comme dans le jeu de
+        démonstration.
+      </p>
+    </div>`;
+}
+
+function majBoutonCharger(): void {
+  const pret = Boolean(
+    fichiers.annuaire &&
+      fichiers.habilitations &&
+      mapAnnuaire?.identifiant &&
+      mapHabilitations?.agent &&
+      mapHabilitations?.acces,
+  );
+  q<HTMLButtonElement>('[data-charger]').disabled = !pret;
+}
+
+function rendreDiagnostics(liste: Diagnostic[]): void {
+  q('[data-diagnostics]').innerHTML =
+    liste.length === 0
+      ? ''
+      : `<div class="diagnostics">${liste
+          .map((d) => `<p class="diagnostic diagnostic--${d.niveau}">${e(d.message)}</p>`)
+          .join('')}</div>`;
+}
+
+function rendreDonnees(et: Etat): void {
+  q('[data-origine-jeu]').textContent = origineJeu;
+  q<HTMLElement>('[data-jeu-demo]').hidden = jeuDemo === null || et.jeu === jeuDemo;
+
+  const attributions = Object.values(et.jeu.attributions).reduce((n, c) => n + c.length, 0);
+  q('[data-chiffres-jeu]').innerHTML = [
+    [nombre(et.jeu.agents.length), 'agents'],
+    [nombre(et.jeu.agents.filter((a) => a.prestataire).length), 'prestataires'],
+    [nombre(new Set(et.jeu.agents.map((a) => a.departement)).size), 'services'],
+    [nombre(new Set(et.jeu.agents.map((a) => a.site)).size), 'sites'],
+    [nombre(et.jeu.catalogue.length), 'accès au catalogue'],
+    [nombre(attributions), 'attributions'],
+  ]
+    .map(([v, l]) => `<div class="chiffre"><b>${e(v)}</b><span>${e(l)}</span></div>`)
+    .join('');
+
+  const porteurs = new Map<string, number>();
+  for (const codes of Object.values(et.jeu.attributions)) {
+    for (const code of codes) porteurs.set(code, (porteurs.get(code) ?? 0) + 1);
+  }
+
+  q('[data-compte-catalogue]').textContent = `${nombre(et.jeu.catalogue.length)} accès`;
+  q('[data-table-catalogue]').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Code</th><th>Libellé</th><th>Application</th><th>Catégorie</th>
+        <th class="num">Détenteurs</th><th>Marqueurs</th>
+      </tr></thead>
+      <tbody>
+        ${et.jeu.catalogue
+          .map(
+            (a) => `<tr>
+              <td><code>${e(a.code)}</code></td>
+              <td>${e(a.nom)}</td>
+              <td>${e(a.application)}</td>
+              <td>${e(a.categorie)}</td>
+              <td class="num">${nombre(porteurs.get(a.code) ?? 0)}</td>
+              <td>
+                ${a.sensible ? '<span class="etiquette etiquette--a-revoir">sensible</span> ' : ''}
+                ${a.interditPrestataire ? '<span class="etiquette etiquette--alerte">interdit aux prestataires</span>' : ''}
+              </td>
+            </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>`;
+}
+
+function appliquerJeu(jeu: Jeu, origine: string): void {
+  if (!etat) return;
+  origineJeu = origine;
+  etat = { ...etat, jeu };
+  // Les services, les sites et les équipes changent : tout ce qui s'y réfère
+  // doit repartir de zéro plutôt que de garder des clés qui n'existent plus.
+  risques.clear();
+  deplies.clear();
+  rendreFiltresPopulation(jeu);
+  calculer();
+  rendreDonnees(etat);
+}
+
+async function fichierChoisi(input: HTMLInputElement): Promise<void> {
+  const role = input.dataset.fichier as 'annuaire' | 'habilitations' | 'catalogue';
+  const fichier = input.files?.[0];
+  const etatTexte = q(`[data-etat="${role}"]`);
+  if (!fichier) return;
+
+  try {
+    const tableau = parser(await fichier.text());
+    if (tableau.lignes.length === 0) throw new Error('aucune ligne exploitable');
+    fichiers[role] = tableau;
+
+    etatTexte.setAttribute('data-ok', '');
+    etatTexte.textContent = `${fichier.name} — ${nombre(tableau.lignes.length)} lignes, ${nombre(tableau.entetes.length)} colonnes`;
+
+    if (role === 'annuaire') {
+      mapAnnuaire = detecterAnnuaire(tableau.entetes);
+      prestatairesImport.clear();
+      if (mapAnnuaire.departement) {
+        const colonne = mapAnnuaire.departement;
+        for (const d of devinerPrestataires(
+          tableau.lignes.map((l) => (l[colonne] ?? '').trim()),
+        )) {
+          prestatairesImport.add(d);
+        }
+      }
+    }
+    if (role === 'habilitations') mapHabilitations = detecterHabilitations(tableau.entetes);
+  } catch (erreur: unknown) {
+    delete fichiers[role];
+    etatTexte.removeAttribute('data-ok');
+    etatTexte.textContent = `Fichier illisible : ${erreur instanceof Error ? erreur.message : String(erreur)}`;
+  }
+
+  rendreMappage();
+  rendrePrestatairesImport();
+  majBoutonCharger();
+}
+
+function chargerImport(): void {
+  if (!fichiers.annuaire || !fichiers.habilitations || !mapAnnuaire || !mapHabilitations) return;
+
+  const { jeu, diagnostics } = construireDepuisCsv({
+    annuaire: fichiers.annuaire,
+    habilitations: fichiers.habilitations,
+    catalogue: fichiers.catalogue,
+    correspondance: mapAnnuaire,
+    correspondanceHabilitations: mapHabilitations,
+    departementsPrestataires: [...prestatairesImport],
+  });
+
+  rendreDiagnostics(diagnostics);
+  if (diagnostics.some((d) => d.niveau === 'erreur')) return;
+
+  appliquerJeu(jeu, `Extraction chargée depuis votre poste — ${nombre(jeu.agents.length)} agents`);
+}
+
+function brancherImport(): void {
+  const panneau = q<HTMLElement>('[data-panneau="donnees"]');
+
+  panneau.addEventListener('change', (ev) => {
+    const cible = ev.target;
+    if (!(cible instanceof HTMLElement)) return;
+
+    if (cible instanceof HTMLInputElement && cible.dataset.fichier) {
+      void fichierChoisi(cible);
+      return;
+    }
+    if (cible instanceof HTMLSelectElement && cible.dataset.map && mapAnnuaire) {
+      mapAnnuaire[cible.dataset.map as keyof Correspondance] = cible.value;
+      rendreMappage();
+      rendrePrestatairesImport();
+      majBoutonCharger();
+      return;
+    }
+    if (cible instanceof HTMLSelectElement && cible.dataset.maph && mapHabilitations) {
+      mapHabilitations[cible.dataset.maph as keyof CorrespondanceHabilitations] = cible.value;
+      majBoutonCharger();
+    }
+  });
+
+  panneau.addEventListener('click', (ev) => {
+    const cible = ev.target;
+    if (!(cible instanceof HTMLElement)) return;
+
+    const pastille = cible.closest<HTMLElement>('[data-presta-import]');
+    if (pastille?.dataset.prestaImport !== undefined) {
+      const d = pastille.dataset.prestaImport;
+      if (prestatairesImport.has(d)) prestatairesImport.delete(d);
+      else prestatairesImport.add(d);
+      pastille.setAttribute('aria-pressed', String(prestatairesImport.has(d)));
+      return;
+    }
+
+    if (cible.closest('[data-charger]')) {
+      chargerImport();
+      return;
+    }
+
+    if (cible.closest('[data-jeu-demo]') && jeuDemo) {
+      rendreDiagnostics([]);
+      appliquerJeu(
+        jeuDemo,
+        'Jeu de démonstration — organisation Contoso francisée, habilitations générées',
+      );
+    }
+  });
+}
+
 /* ------------------------------------------------------------- pilotage --- */
 
 function calculer(): void {
@@ -573,9 +887,12 @@ async function amorcer(): Promise<void> {
     ecarts: [],
   };
 
+  jeuDemo = jeu;
   rendreFiltresPopulation(jeu);
   brancher();
+  brancherImport();
   calculer();
+  rendreDonnees(etat);
 }
 
 amorcer().catch((erreur: unknown) => {

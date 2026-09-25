@@ -65,6 +65,35 @@ département à la fonction fait passer de 16 à 49 équipes et de 113 à 165
 recommandations automatisables — parce que certains accès suivent le métier et
 non le rattachement.
 
+## Charger sa propre extraction
+
+L'outil accepte les exports du client, dans l'onglet **Données**. Deux fichiers
+suffisent :
+
+| Fichier | Contenu |
+|---|---|
+| Annuaire | un identifiant, et si possible un service, une fonction, un site, un responsable |
+| Habilitations | deux colonnes : qui, et quel accès |
+| Catalogue *(facultatif)* | libellés, sensibilité, interdiction aux prestataires |
+
+Les noms de colonnes sont **détectés** — `SamAccountName` comme `Matricule`,
+`Department` comme `Service`, `Office` comme `Ville` — puis **affichés pour
+correction**. Deviner est un confort, pas une certitude : se tromper en silence
+sur la colonne « responsable » fausserait toute la hiérarchie.
+
+La colonne responsable est résolue par nom distinctif, par identifiant ou par nom
+affiché, dans cet ordre. Ce qui ne se résout pas est signalé, jamais inventé :
+lignes sans identifiant, identifiants en double, responsables introuvables,
+attributions visant un agent absent de l'annuaire, accès hors catalogue.
+
+Le séparateur est deviné (point-virgule, virgule, tabulation, barre verticale),
+la marque d'ordre des octets retirée, les guillemets doublés et les fins de ligne
+Windows gérés.
+
+**Ces fichiers ne quittent pas le poste.** Ils sont lus par le navigateur et
+restent en mémoire le temps de la session. Il n'y a pas de serveur à qui les
+envoyer : c'est une propriété de l'architecture, pas une promesse.
+
 ## Le jeu de données
 
 272 agents, 17 départements, 49 intitulés, 3 sites, hiérarchie à 7 niveaux,
@@ -91,7 +120,7 @@ npm run dev
 |---|---|
 | `npm run dev` | serveur de développement |
 | `npm run build` | site statique dans `dist/` |
-| `npm test` | 33 tests du moteur |
+| `npm test` | 55 tests du moteur et de l'import |
 | `npm run typecheck` | TypeScript strict |
 | `npm run donnees` | régénère le jeu (Python 3, sans dépendance) |
 
@@ -103,9 +132,11 @@ npm run dev
 | `src/moteur/cohortes.ts` | périmètre et découpage en équipes |
 | `src/moteur/minage.ts` | couverture, verdicts, réserves, écarts |
 | `src/moteur/factorisation.ts` | arbre hiérarchique et remontée |
+| `src/moteur/csv.ts` | analyse CSV : séparateur deviné, guillemets, BOM |
+| `src/moteur/importation.ts` | détection des colonnes et reconstruction d'un jeu |
 | `src/scripts/app.ts` | l'interface, sans framework |
 | `donnees/` | francisation de Contoso et génération des habilitations (Python) |
-| `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel |
+| `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel, 22 sur l'import |
 
 Le moteur ne dépend ni d'Astro ni du DOM : il est réutilisable tel quel dans un
 traitement serveur ou un script.

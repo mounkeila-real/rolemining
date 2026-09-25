@@ -128,12 +128,23 @@ Le séparateur est deviné (point-virgule, virgule, tabulation, barre verticale)
 la marque d'ordre des octets retirée, les guillemets doublés et les fins de ligne
 Windows gérés.
 
-Le dossier [`exemples/`](exemples/) contient un export de cabinet comptable
-fictif — 27 lignes, en-têtes en français, accents, point-virgule — avec sept
-défauts volontaires : une ligne sans matricule, un matricule en double, un
-responsable absent du fichier, une habilitation attribuée à un inconnu, un
-libellé de service contenant le séparateur, un prestataire administrateur de
-l'annuaire, et une marque d'ordre des octets. Chacun doit produire un message.
+L'onglet Données propose deux séries de fichiers en téléchargement, et il ne
+faut pas les confondre.
+
+**Les modèles** sont propres et minuscules — trois agents, six habilitations,
+trois accès. Ils ne servent qu'à montrer les colonnes attendues et ce qu'on met
+dedans. C'est ce qu'on envoie à un client avant un rendez-vous.
+
+**Le jeu d'essai** est un export de cabinet comptable fictif — 27 lignes,
+en-têtes en français, accents, point-virgule — avec sept défauts volontaires :
+une ligne sans matricule, un matricule en double, un responsable absent du
+fichier, une habilitation attribuée à un inconnu, un libellé de service
+contenant le séparateur, un prestataire administrateur de l'annuaire, et une
+marque d'ordre des octets. Chacun doit produire un message. Il sert à éprouver
+l'import, pas à être rempli.
+
+Les deux sont produits par `donnees/generer-exemple.py` et publiés dans
+`public/exemples/`.
 
 **Ces fichiers ne quittent pas le poste.** Ils sont lus par le navigateur et
 restent en mémoire le temps de la session. Il n'y a pas de serveur à qui les
@@ -182,7 +193,7 @@ npm run dev
 | `src/moteur/regles.ts` | règles transverses : population désignée, impact, export |
 | `src/scripts/app.ts` | l'interface, sans framework |
 | `donnees/` | francisation de Contoso et génération des habilitations (Python) |
-| `exemples/` | un export « client » à défauts volontaires, pour éprouver l'import |
+| `public/exemples/` | modèles à remplir et jeu d'essai à défauts volontaires |
 | `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel, 22 sur l'import, 16 sur les règles |
 
 Le moteur ne dépend ni d'Astro ni du DOM : il est réutilisable tel quel dans un

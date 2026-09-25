@@ -2,6 +2,10 @@
 import '../styles/app.css';
 
 const titre = 'Minage de rôles — aide à la décision';
+// Le site est publié sous un chemin : les liens vers les fichiers d'exemple
+// doivent le porter.
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+
 const description =
   "Démonstrateur de minage de rôles : découpez la population, posez vos seuils, " +
   "et voyez quels accès sont réellement communs à une équipe. Tout le calcul se " +
@@ -322,6 +326,21 @@ const description =
                     ordinaires.</small>
                   </label>
                 </div>
+
+                <p class="modeles">
+                  <strong>Modèles à remplir</strong> — trois agents, juste les
+                  colonnes attendues :
+                  <a href={`${base}/exemples/modele-annuaire.csv`} download>annuaire</a> ·
+                  <a href={`${base}/exemples/modele-habilitations.csv`} download>habilitations</a> ·
+                  <a href={`${base}/exemples/modele-catalogue.csv`} download>catalogue</a>
+                </p>
+                <p class="modeles">
+                  <strong>Jeu d'essai</strong> — un cabinet comptable fictif avec
+                  des défauts volontaires, pour éprouver l'import :
+                  <a href={`${base}/exemples/jeu-essai-annuaire.csv`} download>annuaire</a> ·
+                  <a href={`${base}/exemples/jeu-essai-habilitations.csv`} download>habilitations</a> ·
+                  <a href={`${base}/exemples/jeu-essai-catalogue.csv`} download>catalogue</a>
+                </p>
 
                 <div data-mappage></div>
                 <div data-prestataires-import></div>

@@ -9,7 +9,7 @@
     "preview": "astro preview",
     "typecheck": "astro sync && tsc --noEmit",
     "test": "vitest run",
-    "donnees": "cd donnees && python franciser.py && python verifier.py && python generer.py"
+    "donnees": "cd donnees && python franciser.py && python verifier.py && python generer.py && python generer-exemple.py"
   },
   "dependencies": {
     "astro": "^5.6.1"

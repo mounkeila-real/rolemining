@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Fabrique un petit export « client » pour éprouver l'import de l'outil.
+Fabrique ce que l'on met entre les mains d'un client, et qui sont deux choses
+différentes.
+
+**Les modèles** : trois fichiers minuscules et parfaitement propres, à remplir.
+Trois agents, six habilitations, trois accès. Leur seul rôle est de montrer les
+colonnes attendues et ce qu'on met dedans.
+
+**Le jeu d'essai** : un export de cabinet comptable fictif, avec des défauts
+volontaires. Il ne sert pas à être rempli mais à éprouver l'import.
 
 Il ne ressemble volontairement pas au jeu de démonstration : en-têtes en
 français, séparateur point-virgule, accents partout, et surtout des défauts que
@@ -138,8 +146,8 @@ for m in ENCADRANTS:
 # L'écart à faire remonter : un prestataire administrateur de l'annuaire.
 droits['P003'].add('AD-ADMIN')
 
-os.makedirs(os.path.dirname(os.path.abspath(__file__)), exist_ok=True)
-ici = os.path.dirname(os.path.abspath(__file__))
+ici = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'public', 'exemples')
+os.makedirs(ici, exist_ok=True)
 
 
 def ecrire(nom, entetes, lignes, bom=False):
@@ -151,18 +159,44 @@ def ecrire(nom, entetes, lignes, bom=False):
     return chemin
 
 
-ecrire('annuaire.csv',
+ecrire('jeu-essai-annuaire.csv',
        ['Matricule', 'Nom complet', 'Service', 'Fonction', 'Site', 'Responsable'],
        AGENTS, bom=True)
 
 attributions = [(m, c) for m in sorted(droits) for c in sorted(droits[m])]
 attributions.append(('M099', 'MSG'))  # agent absent de l'annuaire, exprès
-ecrire('habilitations.csv', ['Utilisateur', 'Groupe'], attributions)
+ecrire('jeu-essai-habilitations.csv', ['Utilisateur', 'Groupe'], attributions)
 
-ecrire('catalogue.csv',
+ecrire('jeu-essai-catalogue.csv',
        ['Code', 'Libelle', 'Application', 'Categorie', 'Sensible', 'InterditPrestataire'],
        CATALOGUE)
 
-print('annuaire.csv     : %d lignes (%d matricules uniques)' % (len(AGENTS), len(uniques)))
-print('habilitations.csv: %d lignes' % len(attributions))
-print('catalogue.csv    : %d accès' % len(CATALOGUE))
+# --- les modèles : propres, minuscules, faits pour être remplis ---
+MODELE_ANNUAIRE = [
+    ('jdupont',  'Jeanne Dupont', 'Direction financière', 'Directrice financière', 'Paris', ''),
+    ('mlefevre', 'Marc Lefèvre',  'Comptabilité',         'Comptable',             'Paris', 'jdupont'),
+    ('alaurent', 'Amina Laurent', 'Comptabilité',         'Comptable',             'Lyon',  'jdupont'),
+]
+MODELE_HABILITATIONS = [
+    ('jdupont',  'MESSAGERIE'), ('jdupont',  'ERP-VALIDATION'),
+    ('mlefevre', 'MESSAGERIE'), ('mlefevre', 'ERP-SAISIE'),
+    ('alaurent', 'MESSAGERIE'), ('alaurent', 'ERP-SAISIE'),
+]
+MODELE_CATALOGUE = [
+    ('MESSAGERIE',     'Messagerie',       'Messagerie', 'Socle',    0, 0),
+    ('ERP-SAISIE',     'ERP — saisie',     'ERP',        'Métier',   0, 0),
+    ('ERP-VALIDATION', 'ERP — validation', 'ERP',        'Sensible', 1, 1),
+]
+
+ecrire('modele-annuaire.csv',
+       ['Identifiant', 'Nom complet', 'Service', 'Fonction', 'Site', 'Responsable'],
+       MODELE_ANNUAIRE)
+ecrire('modele-habilitations.csv', ['Identifiant', 'Acces'], MODELE_HABILITATIONS)
+ecrire('modele-catalogue.csv',
+       ['Code', 'Libelle', 'Application', 'Categorie', 'Sensible', 'InterditPrestataire'],
+       MODELE_CATALOGUE)
+
+print('modeles          : 3 agents, %d habilitations, %d acces'
+      % (len(MODELE_HABILITATIONS), len(MODELE_CATALOGUE)))
+print('jeu d essai      : %d lignes (%d matricules uniques), %d habilitations, %d acces'
+      % (len(AGENTS), len(uniques), len(attributions), len(CATALOGUE)))

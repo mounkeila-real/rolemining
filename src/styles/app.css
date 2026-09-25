@@ -329,6 +329,10 @@ tbody tr:hover { background: var(--surface-2); }
 }
 .mappage select[data-manquant] { border-color: var(--alerte); }
 
+.modeles { font-size: .8rem; color: var(--texte-doux); line-height: 1.7; margin: 0; }
+.modeles strong { color: var(--texte); font-weight: 600; }
+.modeles a { color: var(--accent); }
+
 .import__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 
 .diagnostics { display: grid; gap: .4rem; }

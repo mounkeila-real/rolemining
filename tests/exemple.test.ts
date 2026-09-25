@@ -19,11 +19,11 @@ import { CONDITIONS_PAR_DEFAUT } from '../src/moteur/types';
  * « nettoie » les fichiers, la démonstration perdrait tout son intérêt et ce
  * test tomberait.
  */
-const lire = (nom: string) => parser(readFileSync(`exemples/${nom}`, 'utf8'));
+const lire = (nom: string) => parser(readFileSync(`public/exemples/${nom}`, 'utf8'));
 
-const annuaire = lire('annuaire.csv');
-const habilitations = lire('habilitations.csv');
-const catalogue = lire('catalogue.csv');
+const annuaire = lire('jeu-essai-annuaire.csv');
+const habilitations = lire('jeu-essai-habilitations.csv');
+const catalogue = lire('jeu-essai-catalogue.csv');
 
 const correspondance = detecterAnnuaire(annuaire.entetes);
 const resultat = construire({

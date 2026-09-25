@@ -1,0 +1,241 @@
+---
+import '../styles/app.css';
+
+const titre = 'Minage de rôles — aide à la décision';
+const description =
+  "Démonstrateur de minage de rôles : découpez la population, posez vos seuils, " +
+  "et voyez quels accès sont réellement communs à une équipe. Tout le calcul se " +
+  "fait dans le navigateur, aucune donnée n'est transmise.";
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titre}</title>
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+  </head>
+
+  <body>
+    <div class="appli">
+      <header class="bandeau">
+        <h1 class="bandeau__titre">Minage de rôles <span>— aide à la décision</span></h1>
+        <p class="bandeau__note">
+          Calcul local : aucune donnée ne quitte ce navigateur
+        </p>
+        <button type="button" class="bandeau__theme" data-theme-bascule>
+          Contraste
+        </button>
+      </header>
+
+      <div class="corps">
+        <!-- ─────────────────────────────── conditions du minage ─────────── -->
+        <form class="conditions" id="conditions" autocomplete="off">
+          <div class="conditions__entete">
+            <h2>Conditions du minage</h2>
+            <button type="button" class="conditions__reinit" data-reinit>Réinitialiser</button>
+            <button type="button" class="mini conditions__plier" data-plier aria-expanded="true">
+              Replier
+            </button>
+          </div>
+
+          <div class="conditions__corps" data-corps>
+          <fieldset class="bloc">
+            <legend>Définition de l'équipe</legend>
+            <label class="champ">
+              <select id="definition" name="definition">
+                <option value="departement">Département</option>
+                <option value="departement+site">Département + site</option>
+                <option value="responsable">Responsable hiérarchique</option>
+                <option value="titre">Fonction (intitulé de poste)</option>
+                <option value="titre+site">Fonction + site</option>
+                <option value="site">Site</option>
+              </select>
+            </label>
+            <p class="aide" data-aide-definition></p>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Population</legend>
+            <label class="case">
+              <input type="checkbox" id="prestataires" name="prestataires" />
+              <span>Inclure les prestataires</span>
+            </label>
+            <p class="aide">
+              Exclus par défaut : ils ne comptent ni au numérateur ni au
+              dénominateur des pourcentages.
+            </p>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Départements retenus</legend>
+            <div data-liste-departements></div>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Sites retenus</legend>
+            <div data-liste-sites></div>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Seuils</legend>
+            <label class="champ">
+              <span class="aide" style="margin:0">Taille minimale d'une équipe minable</span>
+              <input type="number" id="taille" name="taille" min="1" max="50" value="5" />
+            </label>
+            <label class="case" style="margin-top:.6rem">
+              <input type="checkbox" id="exception" name="exception" checked />
+              <span>Traiter quand même une petite équipe si l'accès est à 100 %</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Paliers de recommandation</legend>
+            <label class="curseur">
+              <span class="curseur__haut">
+                <span>Seuil « à revoir »</span><b data-sortie-revoir>85 %</b>
+              </span>
+              <input type="range" id="seuil-revoir" name="seuil-revoir" min="50" max="99" value="85" />
+            </label>
+            <label class="curseur">
+              <span class="curseur__haut">
+                <span>Seuil « faible »</span><b data-sortie-faible>60 %</b>
+              </span>
+              <input type="range" id="seuil-faible" name="seuil-faible" min="10" max="90" value="60" />
+            </label>
+            <p class="aide">
+              100 % donne une recommandation forte. En dessous du seuil « faible »,
+              l'accès est tenu pour de la dérive et n'est pas proposé.
+            </p>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Accès</legend>
+            <label class="case">
+              <input type="checkbox" id="obsoletes" name="obsoletes" checked />
+              <span>Écarter les outils à l'abandon</span>
+            </label>
+            <label class="case">
+              <input type="checkbox" id="sensibles" name="sensibles" checked />
+              <span>Exiger une validation humaine sur les accès sensibles</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="bloc">
+            <legend>Groupes à risque</legend>
+            <div class="pastilles" data-liste-risques></div>
+            <p class="aide">
+              Une équipe marquée reste minée et reste visible, mais aucune de ses
+              recommandations n'est automatisable.
+            </p>
+          </fieldset>
+          </div>
+        </form>
+
+        <!-- ──────────────────────────────────────── résultats ───────────── -->
+        <main class="resultats">
+          <div class="onglets" role="tablist" aria-label="Résultats">
+            <button type="button" class="onglet" role="tab" data-onglet="synthese" aria-selected="true">
+              Synthèse
+            </button>
+            <button type="button" class="onglet" role="tab" data-onglet="recommandations" aria-selected="false">
+              Recommandations <b data-compte-recos></b>
+            </button>
+            <button type="button" class="onglet" role="tab" data-onglet="factorisation" aria-selected="false">
+              Factorisation <b data-compte-facto></b>
+            </button>
+            <button type="button" class="onglet" role="tab" data-onglet="ecarts" aria-selected="false">
+              Écarts <b data-compte-ecarts></b>
+            </button>
+          </div>
+
+          <section data-panneau="synthese" data-charge="Chargement du jeu de données…">
+            <div class="carte">
+              <div class="chiffres" data-chiffres></div>
+            </div>
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
+                <h3>Répartition des accès observés</h3>
+                <p data-total-observations></p>
+              </div>
+              <div style="padding:1rem">
+                <div class="barre" data-barre></div>
+                <div class="legende" data-legende></div>
+              </div>
+            </div>
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
+                <h3>Équipes</h3>
+                <p>Effectif et minabilité sous les conditions posées</p>
+              </div>
+              <div class="tableau" data-table-cohortes></div>
+            </div>
+          </section>
+
+          <section data-panneau="recommandations" hidden>
+            <div class="carte">
+              <div class="carte__entete">
+                <h3>Recommandations</h3>
+                <p data-sous-titre-recos></p>
+                <div class="carte__outils" data-filtres-bande>
+                  <button type="button" class="mini" data-bande="automatisables" aria-pressed="true">Automatisables</button>
+                  <button type="button" class="mini" data-bande="forte" aria-pressed="false">Fortes</button>
+                  <button type="button" class="mini" data-bande="a-revoir" aria-pressed="false">À revoir</button>
+                  <button type="button" class="mini" data-bande="faible" aria-pressed="false">Faibles</button>
+                  <button type="button" class="mini" data-bande="ecartee" aria-pressed="false">Écartées</button>
+                  <button type="button" class="mini" data-bande="toutes" aria-pressed="false">Toutes</button>
+                  <button type="button" class="mini" data-export>Exporter en CSV</button>
+                </div>
+              </div>
+              <div class="tableau" data-table-recos></div>
+            </div>
+          </section>
+
+          <section data-panneau="factorisation" hidden>
+            <div class="carte">
+              <div class="carte__entete">
+                <h3>Remontée hiérarchique</h3>
+                <p>
+                  Un accès commun se pose au nœud le plus haut. Une équipe sous le
+                  seuil bloque la remontée.
+                </p>
+              </div>
+              <div data-facto></div>
+            </div>
+          </section>
+
+          <section data-panneau="ecarts" hidden>
+            <div class="carte">
+              <div class="carte__entete">
+                <h3>Écarts constatés</h3>
+                <p>Indépendants des seuils : ils n'attendent pas une recommandation</p>
+              </div>
+              <div class="tableau" data-table-ecarts></div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <footer class="pied">
+        <p>
+          Démonstrateur. L'organisation est dérivée du jeu de référence Contoso de
+          Microsoft ; les habilitations sont générées. <strong>Aucune donnée
+          réelle</strong>, aucun envoi : tout le calcul se fait dans ce navigateur.
+        </p>
+        <p class="pied__signature">Créé par <strong>Codeur DRABO</strong></p>
+      </footer>
+    </div>
+
+    <script>
+      import '../scripts/app';
+    </script>
+  </body>
+</html>

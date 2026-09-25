@@ -1,0 +1,22 @@
+{
+  "name": "rolemining",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "donnees": "cd donnees && python franciser.py && python verifier.py && python generer.py"
+  },
+  "dependencies": {
+    "astro": "^5.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

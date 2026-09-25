@@ -1,0 +1,115 @@
+# Minage de rôles — démonstrateur
+
+Outil d'aide à la décision pour la revue d'habilitations : on découpe la
+population en équipes, on regarde quels accès sont réellement communs à chacune,
+et on en tire des recommandations de provisionnement — avec les réserves qui
+vont avec.
+
+**Tout le calcul se fait dans le navigateur.** Aucune donnée n'est transmise à
+un serveur. Ce n'est pas une facilité technique : pour un outil qui manipule des
+annuaires d'entreprise, c'est la seule réponse tenable à la question « où vont
+mes données ».
+
+## La règle de décision
+
+Pour une équipe donnée et un accès donné, on calcule la part de l'équipe qui le
+détient :
+
+| Couverture | Lecture |
+|---|---|
+| 100 % | recommandation forte — l'accès appartient au rôle |
+| 85 à 99 % | à revoir — il manque à quelques personnes, c'est peut-être un oubli |
+| 60 à 84 % | faible — l'accès n'est pas caractéristique de l'équipe |
+| moins de 60 % | écarté — de la dérive individuelle, pas un rôle |
+
+Les paliers sont réglables. Ce qui ne l'est pas, c'est la logique : **le
+pourcentage ne décide pas seul.**
+
+- Une équipe de **moins de 5 personnes n'est pas minable** — trois personnes qui
+  partagent un accès ne prouvent rien. Exception : si l'accès est détenu par
+  **100 %** de l'équipe, il est retenu quand même.
+- Les **prestataires sont hors minage par défaut**. Ils ne comptent ni au
+  numérateur ni au dénominateur. On peut les réintégrer, cohorte par cohorte.
+- Un accès peut être **interdit aux prestataires** : le marqueur est porté par
+  l'accès et bloque l'affectation quel que soit le pourcentage.
+- Un **accès sensible** ne devient jamais un automatisme : il produit une
+  recommandation, mais qui attend une validation humaine.
+- Une équipe marquée **à risque** reste minée et reste visible, mais aucune de
+  ses recommandations n'est automatisable.
+
+## La factorisation, et ce qui la bloque
+
+Un accès commun à plusieurs équipes n'a pas à être répété équipe par équipe : il
+se pose une fois, au nœud le plus haut de la hiérarchie qui le couvre
+entièrement. L'outil cherche ce nœud pour chaque accès.
+
+**Une équipe sous le seuil bloque la remontée.** Si toutes les grandes équipes
+d'une direction détiennent un accès mais qu'une équipe de trois personnes ne l'a
+pas, factoriser à la direction ferait hériter ces trois personnes d'un droit que
+personne n'a validé pour elles. L'outil refuse, nomme l'équipe bloquante, et
+laisse un humain trancher.
+
+Seuls les nœuds qui couvrent **au moins deux équipes** sont proposés : un nœud
+qui n'en couvre qu'une ne factorise rien, il redit ce que l'onglet des
+recommandations dit déjà.
+
+## Le minage conditionnel
+
+Le même jeu de données, miné sous deux jeux de conditions, donne deux réponses —
+et les deux sont justes. C'est tout l'objet de l'outil : la définition de
+l'équipe est une décision, pas une donnée.
+
+Six découpages sont proposés : département, département + site, responsable
+hiérarchique, fonction, fonction + site, site. Sur le jeu fourni, passer du
+département à la fonction fait passer de 16 à 49 équipes et de 113 à 165
+recommandations automatisables — parce que certains accès suivent le métier et
+non le rattachement.
+
+## Le jeu de données
+
+272 agents, 17 départements, 49 intitulés, 3 sites, hiérarchie à 7 niveaux,
+79 accès au catalogue, environ 4 200 attributions.
+
+L'organisation vient du jeu de référence **Contoso de Microsoft**, francisé ; la
+couche d'habilitations est générée par-dessus. La forme de l'organisation n'a
+donc pas été taillée pour flatter l'algorithme — seuls les droits sont
+synthétiques. Le détail est dans [`donnees/README-fr.md`](donnees/README-fr.md).
+
+La dérive est volontaire et documentée : des accès résiduels sous le seuil qui ne
+doivent pas être recommandés, des couvertures à 86 ou 93 % qui doivent ressortir
+« à revoir », des outils à l'abandon, et six écarts francs — dont des
+prestataires détenant un accès qui leur est interdit.
+
+## Mise en route
+
+```bash
+npm install
+npm run dev
+```
+
+| Commande | |
+|---|---|
+| `npm run dev` | serveur de développement |
+| `npm run build` | site statique dans `dist/` |
+| `npm test` | 33 tests du moteur |
+| `npm run typecheck` | TypeScript strict |
+| `npm run donnees` | régénère le jeu (Python 3, sans dépendance) |
+
+## Organisation du code
+
+| | |
+|---|---|
+| `src/moteur/` | le calcul, en TypeScript pur, sans dépendance et testé |
+| `src/moteur/cohortes.ts` | périmètre et découpage en équipes |
+| `src/moteur/minage.ts` | couverture, verdicts, réserves, écarts |
+| `src/moteur/factorisation.ts` | arbre hiérarchique et remontée |
+| `src/scripts/app.ts` | l'interface, sans framework |
+| `donnees/` | francisation de Contoso et génération des habilitations (Python) |
+| `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel |
+
+Le moteur ne dépend ni d'Astro ni du DOM : il est réutilisable tel quel dans un
+traitement serveur ou un script.
+
+---
+
+Créé par **Codeur DRABO**.

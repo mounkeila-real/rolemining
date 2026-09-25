@@ -65,6 +65,32 @@ département à la fonction fait passer de 16 à 49 équipes et de 113 à 165
 recommandations automatisables — parce que certains accès suivent le métier et
 non le rattachement.
 
+## L'assistant de règles transverses
+
+Le minage part du découpage de l'entreprise et cherche ce qui est commun.
+L'assistant prend le problème par l'autre bout : on **désigne** une population
+par ses attributs — tous les consultants CRM, ou tous les commerciaux de Metz —
+et on regarde ce qu'elle détient pour en faire un automatisme.
+
+Trois étapes. **Qui** : on combine service, fonction et site ; laisser un
+attribut vide, c'est ne pas le contraindre. **Quoi** : l'outil propose les accès
+universels et sans réserve, et on coche ou décoche. **Ce que ça engage** : le
+nombre de provisionnements, les personnes concernées nommément, et l'export.
+
+Sur le jeu fourni, les 49 commerciaux sont répartis sur deux services et trois
+sites. L'assistant propose six accès qu'ils détiennent tous — et si l'on ajoute
+la formation, détenue par 46 sur 49, il annonce trois provisionnements et nomme
+les trois personnes.
+
+Les conditions posées à gauche s'appliquent ici aussi : mêmes seuils, même
+traitement des prestataires, même exigence de validation sur les accès
+sensibles. **Une règle transverse n'est pas une porte dérobée** — un accès
+sensible n'est jamais proposé de lui-même, et un accès interdit aux prestataires
+les retire du provisionnement au lieu de les inclure.
+
+Rien n'est appliqué. L'outil produit la décision et son périmètre, en CSV pour
+l'équipe qui provisionne et en JSON pour l'outillage.
+
 ## Charger sa propre extraction
 
 L'outil accepte les exports du client, dans l'onglet **Données**. Deux fichiers
@@ -120,7 +146,7 @@ npm run dev
 |---|---|
 | `npm run dev` | serveur de développement |
 | `npm run build` | site statique dans `dist/` |
-| `npm test` | 55 tests du moteur et de l'import |
+| `npm test` | 71 tests |
 | `npm run typecheck` | TypeScript strict |
 | `npm run donnees` | régénère le jeu (Python 3, sans dépendance) |
 
@@ -134,9 +160,10 @@ npm run dev
 | `src/moteur/factorisation.ts` | arbre hiérarchique et remontée |
 | `src/moteur/csv.ts` | analyse CSV : séparateur deviné, guillemets, BOM |
 | `src/moteur/importation.ts` | détection des colonnes et reconstruction d'un jeu |
+| `src/moteur/regles.ts` | règles transverses : population désignée, impact, export |
 | `src/scripts/app.ts` | l'interface, sans framework |
 | `donnees/` | francisation de Contoso et génération des habilitations (Python) |
-| `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel, 22 sur l'import |
+| `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel, 22 sur l'import, 16 sur les règles |
 
 Le moteur ne dépend ni d'Astro ni du DOM : il est réutilisable tel quel dans un
 traitement serveur ou un script.

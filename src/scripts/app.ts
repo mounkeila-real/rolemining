@@ -27,6 +27,14 @@ import {
   type CorrespondanceHabilitations,
   type Diagnostic,
 } from '../moteur/importation';
+import {
+  analyser,
+  decrire,
+  figer,
+  type Analyse,
+  type Attribut,
+  type Critere,
+} from '../moteur/regles';
 
 /* ------------------------------------------------------------------ outils -- */
 
@@ -364,6 +372,250 @@ function rendreEcarts(et: Etat): void {
     </table>`;
 }
 
+/* --------------------------------------------------- assistant de règles -- */
+
+/**
+ * L'assistant prend le problème par l'autre bout : au lieu de subir le découpage
+ * de l'entreprise, on désigne une population par ses attributs — tous les
+ * consultants CRM, ou tous les commerciaux de Metz — et on regarde ce qu'elle
+ * détient pour en faire une règle.
+ *
+ * Les conditions posées à gauche s'appliquent ici aussi : mêmes seuils, même
+ * traitement des prestataires, même exigence de validation sur les accès
+ * sensibles. Une règle transverse n'est pas une porte dérobée.
+ */
+
+const ATTRIBUTS: [Attribut, string][] = [
+  ['departement', 'Service'],
+  ['titre', 'Fonction'],
+  ['site', 'Site'],
+];
+
+const criteresAssistant: Critere[] = ATTRIBUTS.map(([attribut]) => ({
+  attribut,
+  valeurs: [],
+}));
+/** `undefined` = on suit la proposition de l'outil ; un ensemble = l'utilisateur a tranché. */
+let retenusAssistant: Set<string> | undefined;
+let analyseCourante: Analyse | null = null;
+
+function rendrePickers(jeu: Jeu): void {
+  q('[data-pickers]').innerHTML = ATTRIBUTS.map(([attribut, libelle]) => {
+    const compte = new Map<string, number>();
+    for (const a of jeu.agents) {
+      compte.set(a[attribut], (compte.get(a[attribut]) ?? 0) + 1);
+    }
+    const valeursTriees = [...compte.keys()].sort((a, b) => a.localeCompare(b, 'fr'));
+
+    return `
+      <div class="picker">
+        <p class="mappage__t">${e(libelle)}</p>
+        <input type="search" class="picker__filtre" data-filtre="${attribut}"
+               placeholder="Filtrer — ${valeursTriees.length} valeurs" />
+        <div class="picker__liste" data-valeurs="${attribut}">
+          ${valeursTriees
+            .map(
+              (v) => `<label class="case" data-item>
+                <input type="checkbox" data-val="${attribut}" value="${e(v)}" />
+                <span>${e(v)}</span><em>${nombre(compte.get(v) ?? 0)}</em>
+              </label>`,
+            )
+            .join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function rendreAssistant(et: Etat): void {
+  const analyse = analyser(et.jeu, criteresAssistant, et.conditions, retenusAssistant);
+  analyseCourante = analyse;
+
+  const services = new Set(analyse.membres.map((m) => m.departement)).size;
+  const sites = new Set(analyse.membres.map((m) => m.site)).size;
+  const sousLeSeuil = analyse.membres.length < et.conditions.tailleMinimale;
+
+  q('[data-population]').innerHTML = `
+    <span><b>${nombre(analyse.membres.length)}</b> personnes visées</span>
+    <span><b>${nombre(services)}</b> service${services > 1 ? 's' : ''}</span>
+    <span><b>${nombre(sites)}</b> site${sites > 1 ? 's' : ''}</span>
+    ${analyse.ecartes.length > 0 ? `<span><b>${nombre(analyse.ecartes.length)}</b> prestataire${analyse.ecartes.length > 1 ? 's' : ''} écarté${analyse.ecartes.length > 1 ? 's' : ''}</span>` : ''}
+    <span>${e(decrire(criteresAssistant))}</span>
+    ${sousLeSeuil && analyse.membres.length > 0 ? `<span class="population__alerte">population sous le seuil de ${et.conditions.tailleMinimale} : aucune proposition automatique</span>` : ''}`;
+
+  const retenues = analyse.lignes.filter((l) => l.retenu);
+  q('[data-sous-titre-regle]').textContent =
+    analyse.membres.length === 0
+      ? 'Aucune personne ne répond à ces critères'
+      : `${nombre(retenues.length)} accès retenus sur ${nombre(analyse.lignes.length)} observés`;
+
+  q('[data-table-regle]').innerHTML =
+    analyse.lignes.length === 0
+      ? '<p class="vide">Désignez une population à l\'étape 1.</p>'
+      : `<table>
+          <thead><tr>
+            <th></th><th>Accès</th><th>Couverture</th><th>À provisionner</th><th>Réserves</th>
+          </tr></thead>
+          <tbody>
+            ${analyse.lignes
+              .map(
+                (l) => `<tr>
+                  <td><input type="checkbox" data-acces-regle="${e(l.code)}" ${l.retenu ? 'checked' : ''} /></td>
+                  <td>${e(l.libelle)}<br /><code>${e(l.code)}</code>
+                      <span class="reserve" style="font-size:.74rem">${e(l.application)}</span></td>
+                  <td>
+                    <span class="jauge">
+                      <span class="jauge__piste"><span class="jauge__part" style="width:${(l.taux * 100).toFixed(1)}%;background:${l.taux === 1 ? 'var(--forte)' : l.taux >= 0.85 ? 'var(--revoir)' : 'var(--ecartee)'}"></span></span>
+                      <b>${pourcent(l.taux)}</b>
+                    </span>
+                    <span class="reserve" style="font-size:.75rem">${nombre(l.detenteurs)} / ${nombre(l.effectif)}</span>
+                  </td>
+                  <td class="num">${l.aProvisionner.length === 0 ? '—' : nombre(l.aProvisionner.length)}</td>
+                  <td>${
+                    l.reserves.length > 0
+                      ? `<div class="reserves">${l.reserves.map((r) => `<span class="reserve">${e(r)}</span>`).join('')}</div>`
+                      : '<span class="reserve">rien à signaler</span>'
+                  }</td>
+                </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>`;
+
+  const actions = retenues.reduce((n, l) => n + l.aProvisionner.length, 0);
+  const agents = new Set(retenues.flatMap((l) => l.aProvisionner)).size;
+  const sousReserve = retenues.filter((l) => l.reserves.length > 0).length;
+
+  q('[data-impact]').innerHTML = [
+    [nombre(analyse.membres.length), 'personnes visées'],
+    [nombre(retenues.length), 'accès dans la règle'],
+    [nombre(actions), 'provisionnements'],
+    [nombre(agents), 'personnes à modifier'],
+    [nombre(sousReserve), 'accès retenus malgré une réserve'],
+  ]
+    .map(([v, l]) => `<div class="chiffre"><b>${e(v)}</b><span>${e(l)}</span></div>`)
+    .join('');
+
+  const nomDe = new Map(et.jeu.agents.map((a) => [a.sam, a.nom]));
+  const apercu = retenues
+    .filter((l) => l.aProvisionner.length > 0)
+    .slice(0, 6)
+    .map(
+      (l) =>
+        `<p class="reserve">${e(l.libelle)} → ${l.aProvisionner
+          .slice(0, 5)
+          .map((s) => e(nomDe.get(s) ?? s))
+          .join(' · ')}${l.aProvisionner.length > 5 ? ` … et ${nombre(l.aProvisionner.length - 5)} autres` : ''}</p>`,
+    )
+    .join('');
+
+  q('[data-apercu-regle]').innerHTML = apercu
+    ? `<div class="liste-agents">${apercu}</div>`
+    : actions === 0 && retenues.length > 0
+      ? '<p class="reserve">Aucun provisionnement : la règle ne fait que constater ce qui est déjà en place.</p>'
+      : '';
+}
+
+function nomRegleCourant(): string {
+  const saisi = q<HTMLInputElement>('[data-nom-regle]').value.trim();
+  return saisi || decrire(criteresAssistant);
+}
+
+function exporterRegle(format: 'csv' | 'json'): void {
+  if (!etat || !analyseCourante) return;
+  const regle = figer(nomRegleCourant(), criteresAssistant, analyseCourante);
+  const fichier = slugifier(regle.nom);
+
+  if (format === 'json') {
+    telecharger(
+      `regle-${fichier}.json`,
+      JSON.stringify({ ...regle, population: decrire(criteresAssistant) }, null, 2),
+      'application/json',
+    );
+    return;
+  }
+
+  const nomDe = new Map(etat.jeu.agents.map((a) => [a.sam, a.nom]));
+  const libelleDe = new Map(etat.jeu.catalogue.map((a) => [a.code, a.nom]));
+  telecharger(
+    `regle-${fichier}.csv`,
+    versCsv([
+      ['Regle', 'Population', 'Identifiant', 'Nom', 'Acces', 'Libelle'],
+      ...regle.provisionnements.map((p) => [
+        regle.nom,
+        decrire(criteresAssistant),
+        p.agent,
+        nomDe.get(p.agent) ?? p.agent,
+        p.acces,
+        libelleDe.get(p.acces) ?? p.acces,
+      ]),
+    ]),
+    'text/csv',
+  );
+}
+
+function brancherAssistant(): void {
+  const panneau = q<HTMLElement>('[data-panneau="assistant"]');
+
+  panneau.addEventListener('input', (ev) => {
+    const cible = ev.target;
+    if (!(cible instanceof HTMLInputElement)) return;
+
+    // Le filtre ne touche pas au calcul : il masque des lignes, c'est tout.
+    if (cible.dataset.filtre) {
+      const terme = cible.value.trim().toLowerCase();
+      const liste = panneau.querySelector(`[data-valeurs="${cible.dataset.filtre}"]`);
+      for (const item of liste?.querySelectorAll<HTMLElement>('[data-item]') ?? []) {
+        item.hidden = terme !== '' && !(item.textContent ?? '').toLowerCase().includes(terme);
+      }
+    }
+  });
+
+  panneau.addEventListener('change', (ev) => {
+    const cible = ev.target;
+    if (!(cible instanceof HTMLInputElement) || !etat) return;
+
+    if (cible.dataset.val) {
+      const critere = criteresAssistant.find((c) => c.attribut === cible.dataset.val);
+      if (!critere) return;
+      critere.valeurs = cible.checked
+        ? [...critere.valeurs, cible.value]
+        : critere.valeurs.filter((v) => v !== cible.value);
+      // La population change : la sélection d'accès précédente n'a plus de sens.
+      retenusAssistant = undefined;
+      rendreAssistant(etat);
+      return;
+    }
+
+    if (cible.dataset.accesRegle) {
+      if (!retenusAssistant) {
+        retenusAssistant = new Set(
+          (analyseCourante?.lignes ?? []).filter((l) => l.retenu).map((l) => l.code),
+        );
+      }
+      if (cible.checked) retenusAssistant.add(cible.dataset.accesRegle);
+      else retenusAssistant.delete(cible.dataset.accesRegle);
+      rendreAssistant(etat);
+    }
+  });
+
+  panneau.addEventListener('click', (ev) => {
+    const cible = ev.target;
+    if (!(cible instanceof HTMLElement) || !etat) return;
+
+    if (cible.closest('[data-regle-auto]')) {
+      retenusAssistant = undefined;
+      rendreAssistant(etat);
+    } else if (cible.closest('[data-regle-vide]')) {
+      retenusAssistant = new Set();
+      rendreAssistant(etat);
+    } else if (cible.closest('[data-export-regle-json]')) {
+      exporterRegle('json');
+    } else if (cible.closest('[data-export-regle]')) {
+      exporterRegle('csv');
+    }
+  });
+}
+
 /* ------------------------------------------------------- import de données -- */
 
 /**
@@ -555,7 +807,10 @@ function appliquerJeu(jeu: Jeu, origine: string): void {
   // doit repartir de zéro plutôt que de garder des clés qui n'existent plus.
   risques.clear();
   deplies.clear();
+  for (const critere of criteresAssistant) critere.valeurs = [];
+  retenusAssistant = undefined;
   rendreFiltresPopulation(jeu);
+  rendrePickers(jeu);
   calculer();
   rendreDonnees(etat);
 }
@@ -690,6 +945,7 @@ function calculer(): void {
   rendreFacto(etat);
   rendreEcarts(etat);
   rendreRisques(etat);
+  rendreAssistant(etat);
 }
 
 function rendreRisques(et: Etat): void {
@@ -721,32 +977,56 @@ function rendreFiltresPopulation(jeu: Jeu): void {
     .join('');
 }
 
-function exporter(): void {
-  if (!etat) return;
-  const lignes = [
-    ['Equipe', 'Effectif', 'Acces', 'Libelle', 'Porteurs', 'Taux', 'Verdict', 'Reserves', 'AProvisionner'],
-    ...filtrer(etat.recos).map((r) => [
-      r.cohorteLibelle,
-      String(r.effectif),
-      r.acces,
-      r.accesLibelle,
-      String(r.porteurs),
-      (r.taux * 100).toFixed(1),
-      NOM_VERDICT[r.verdict],
-      r.reserves.join(' ; '),
-      r.manquants.join(' '),
-    ]),
-  ];
-  const csv = lignes
+/** Point-virgule et marque d'ordre des octets : Excel en français ouvre sans broncher. */
+function versCsv(lignes: string[][]): string {
+  return lignes
     .map((l) => l.map((c) => `"${c.replace(/"/g, '""')}"`).join(';'))
     .join('\r\n');
+}
 
-  const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+function slugifier(texte: string): string {
+  return (
+    texte
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60) || 'regle'
+  );
+}
+
+function telecharger(nom: string, contenu: string, type: string): void {
+  const url = URL.createObjectURL(
+    new Blob([type === 'text/csv' ? '\uFEFF' + contenu : contenu], { type }),
+  );
   const a = document.createElement('a');
   a.href = url;
-  a.download = `minage-${bande}.csv`;
+  a.download = nom;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exporter(): void {
+  if (!etat) return;
+  telecharger(
+    `minage-${bande}.csv`,
+    versCsv([
+      ['Equipe', 'Effectif', 'Acces', 'Libelle', 'Porteurs', 'Taux', 'Verdict', 'Reserves', 'AProvisionner'],
+      ...filtrer(etat.recos).map((r) => [
+        r.cohorteLibelle,
+        String(r.effectif),
+        r.acces,
+        r.accesLibelle,
+        String(r.porteurs),
+        (r.taux * 100).toFixed(1),
+        NOM_VERDICT[r.verdict],
+        r.reserves.join(' ; '),
+        r.manquants.join(' '),
+      ]),
+    ]),
+    'text/csv',
+  );
 }
 
 /* ----------------------------------------------------------- branchements -- */
@@ -889,8 +1169,10 @@ async function amorcer(): Promise<void> {
 
   jeuDemo = jeu;
   rendreFiltresPopulation(jeu);
+  rendrePickers(jeu);
   brancher();
   brancherImport();
+  brancherAssistant();
   calculer();
   rendreDonnees(etat);
 }

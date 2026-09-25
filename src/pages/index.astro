@@ -155,6 +155,9 @@ const description =
             <button type="button" class="onglet" role="tab" data-onglet="ecarts" aria-selected="false">
               Écarts <b data-compte-ecarts></b>
             </button>
+            <button type="button" class="onglet" role="tab" data-onglet="assistant" aria-selected="false">
+              Assistant
+            </button>
             <button type="button" class="onglet" role="tab" data-onglet="donnees" aria-selected="false">
               Données
             </button>
@@ -224,6 +227,57 @@ const description =
               <div class="tableau" data-table-ecarts></div>
             </div>
           </section>
+          <section data-panneau="assistant" hidden>
+            <div class="carte">
+              <div class="carte__entete">
+                <h3><span class="etape">1</span> Qui est visé ?</h3>
+                <p>
+                  Désignez la population par ses attributs. Laisser une colonne
+                  vide, c'est ne pas contraindre cet attribut.
+                </p>
+              </div>
+              <div class="pickers" data-pickers></div>
+              <div class="population" data-population></div>
+            </div>
+
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
+                <h3><span class="etape">2</span> Quels accès la règle porte-t-elle ?</h3>
+                <p data-sous-titre-regle></p>
+                <div class="carte__outils">
+                  <button type="button" class="mini" data-regle-auto>
+                    Reprendre la proposition
+                  </button>
+                  <button type="button" class="mini" data-regle-vide>Tout décocher</button>
+                </div>
+              </div>
+              <div class="tableau" data-table-regle></div>
+            </div>
+
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
+                <h3><span class="etape">3</span> Ce que la règle engage</h3>
+                <p>Rien n'est appliqué : l'outil produit la décision, pas l'action.</p>
+              </div>
+              <div class="decision">
+                <label class="champ decision__nom">
+                  <span class="mappage__t">Intitulé de la règle</span>
+                  <input type="text" data-nom-regle placeholder="Socle des commerciaux" />
+                </label>
+                <div class="chiffres" data-impact></div>
+                <div class="decision__actions">
+                  <button type="button" class="mini mini--fort" data-export-regle>
+                    Exporter les provisionnements (CSV)
+                  </button>
+                  <button type="button" class="mini" data-export-regle-json>
+                    Exporter la règle (JSON)
+                  </button>
+                </div>
+                <div data-apercu-regle></div>
+              </div>
+            </div>
+          </section>
+
           <section data-panneau="donnees" hidden>
             <div class="carte">
               <div class="carte__entete">

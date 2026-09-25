@@ -116,6 +116,13 @@ Le séparateur est deviné (point-virgule, virgule, tabulation, barre verticale)
 la marque d'ordre des octets retirée, les guillemets doublés et les fins de ligne
 Windows gérés.
 
+Le dossier [`exemples/`](exemples/) contient un export de cabinet comptable
+fictif — 27 lignes, en-têtes en français, accents, point-virgule — avec sept
+défauts volontaires : une ligne sans matricule, un matricule en double, un
+responsable absent du fichier, une habilitation attribuée à un inconnu, un
+libellé de service contenant le séparateur, un prestataire administrateur de
+l'annuaire, et une marque d'ordre des octets. Chacun doit produire un message.
+
 **Ces fichiers ne quittent pas le poste.** Ils sont lus par le navigateur et
 restent en mémoire le temps de la session. Il n'y a pas de serveur à qui les
 envoyer : c'est une propriété de l'architecture, pas une promesse.
@@ -146,7 +153,7 @@ npm run dev
 |---|---|
 | `npm run dev` | serveur de développement |
 | `npm run build` | site statique dans `dist/` |
-| `npm test` | 71 tests |
+| `npm test` | 79 tests |
 | `npm run typecheck` | TypeScript strict |
 | `npm run donnees` | régénère le jeu (Python 3, sans dépendance) |
 
@@ -163,6 +170,7 @@ npm run dev
 | `src/moteur/regles.ts` | règles transverses : population désignée, impact, export |
 | `src/scripts/app.ts` | l'interface, sans framework |
 | `donnees/` | francisation de Contoso et génération des habilitations (Python) |
+| `exemples/` | un export « client » à défauts volontaires, pour éprouver l'import |
 | `tests/` | 23 tests sur une organisation jouet lisible, 10 sur le jeu réel, 22 sur l'import, 16 sur les règles |
 
 Le moteur ne dépend ni d'Astro ni du DOM : il est réutilisable tel quel dans un

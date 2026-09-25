@@ -1,0 +1,28 @@
+﻿Matricule;Nom complet;Service;Fonction;Site;Responsable
+M001;Martine Weiss;Direction;Directrice associée;Nancy;
+M002;Serge Klein;Direction;Directeur associé;Nancy;M001
+M010;Hélène Muller;Expertise comptable;Chef de mission;Nancy;Serge Klein
+M011;Julien Schmitt;Expertise comptable;Collaborateur comptable;Nancy;M010
+M012;Camille Roth;Expertise comptable;Collaborateur comptable;Nancy;M010
+M013;Nicolas Barth;Expertise comptable;Collaborateur comptable;Strasbourg;M010
+M014;Sophie Kieffer;Expertise comptable;Collaborateur comptable;Strasbourg;M010
+M015;Thomas Meyer;Expertise comptable;Collaborateur comptable;Nancy;M010
+M016;Aurélie Zimmer;Expertise comptable;Collaborateur comptable;Strasbourg;M010
+M017;Mathieu Lang;Expertise comptable;Collaborateur comptable;Nancy;M010
+M020;Élodie Wagner;Paie social;Responsable pôle social;Nancy;M002
+M021;Sébastien Fischer;Paie social;Gestionnaire de paie;Nancy;M020
+M022;Laetitia Braun;Paie social;Gestionnaire de paie;Nancy;M020
+M023;Guillaume Diss;Paie social;Gestionnaire de paie;Strasbourg;M020
+M024;Marion Keller;Paie social;Gestionnaire de paie;Strasbourg;M020
+M030;Vincent Haas;"Audit; commissariat aux comptes";Chef de mission;Strasbourg;M002
+M031;Céline Stoll;"Audit; commissariat aux comptes";Auditeur;Strasbourg;M030
+M032;Romain Hoffmann;"Audit; commissariat aux comptes";Auditeur;Strasbourg;M030
+M033;Émilie Petit;"Audit; commissariat aux comptes";Auditeur;Nancy;MOREAU Luc
+M040;Antoine Gross;Informatique;Responsable informatique;Nancy;M001
+M041;Charlotte Simon;Informatique;Technicien;Nancy;M040
+M042;Maxime Thiébaut;Informatique;Technicien;Strasbourg;M040
+P001;Justine Colas;Prestataires;Collaborateur comptable;Nancy;M010
+P002;Benoît Mercier;Prestataires;Collaborateur comptable;Strasbourg;M010
+P003;Pauline Adam;Prestataires;Technicien;Nancy;M040
+;Stagiaire non enregistré;Expertise comptable;Stagiaire;Nancy;M010
+M012;Camille Roth;Expertise comptable;Collaborateur comptable;Nancy;M010

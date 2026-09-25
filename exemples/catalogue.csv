@@ -1,0 +1,20 @@
+Code;Libelle;Application;Categorie;Sensible;InterditPrestataire
+MSG;Messagerie;Messagerie;Socle;0;0
+INTRANET;Intranet du cabinet;Intranet;Socle;0;0
+GED;Gestion documentaire;GED;Socle;0;0
+BADGE-NCY;Badge — Nancy;Contrôle d'accès;Site;0;0
+BADGE-STR;Badge — Strasbourg;Contrôle d'accès;Site;0;0
+IMP-NCY;Impression — Nancy;Impression;Site;0;0
+IMP-STR;Impression — Strasbourg;Impression;Site;0;0
+ECM-PROD;Production comptable;Cabinet;Métier;0;0
+ECM-REVISION;Révision des dossiers;Cabinet;Métier;0;0
+LIASSE;Liasse fiscale;Cabinet;Métier;0;0
+SILAE;Logiciel de paie;Paie;Métier;0;1
+DSN;Déclaration sociale nominative;Paie;Métier;0;1
+CONTRAT;Contrats de travail;Paie;Sensible;1;1
+AUDIT-DOSSIER;Dossier d'audit;Audit;Métier;0;0
+CAC-SIGNATURE;Signature du commissaire aux comptes;Audit;Sensible;1;1
+AD-ADMIN;Administration de l'annuaire;Annuaire;Sensible;1;1
+SUPERVISION;Supervision du système;Annuaire;Métier;0;0
+CONGES;Congés — self-service;SIRH;Fonction;0;1
+NDF;Notes de frais;Frais;Fonction;0;0

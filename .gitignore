@@ -1,5 +1,7 @@
 *.log
+*.py[cod]
 .astro/
 .claude/
+__pycache__/
 dist/
 node_modules/

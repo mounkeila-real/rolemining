@@ -557,7 +557,10 @@ function brancher(): void {
 /* ---------------------------------------------------------------- amorce -- */
 
 async function amorcer(): Promise<void> {
-  const reponse = await fetch(`${import.meta.env.BASE_URL}donnees/jeu.json`);
+  // Le site est publié sous un chemin (/rolemining) : on recolle proprement,
+  // que BASE_URL finisse par une barre oblique ou non.
+  const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+  const reponse = await fetch(`${base}/donnees/jeu.json`);
   if (!reponse.ok) throw new Error(`jeu.json : ${reponse.status}`);
   const jeu = (await reponse.json()) as Jeu;
 

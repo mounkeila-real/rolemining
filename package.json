@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "astro sync && tsc --noEmit",
     "test": "vitest run",
     "donnees": "cd donnees && python franciser.py && python verifier.py && python generer.py"
   },

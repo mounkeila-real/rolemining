@@ -338,8 +338,29 @@ const description =
 
             <div class="carte" style="margin-top:1rem">
               <div class="carte__entete">
+                <h3>Population</h3>
+                <p data-compte-population></p>
+                <div class="carte__outils">
+                  <input type="search" class="picker__filtre" data-filtre-population
+                         placeholder="Chercher un nom, un service, un accès…"
+                         style="min-width:min(280px,60vw)" />
+                  <button type="button" class="mini" data-export-population>
+                    Exporter (CSV)
+                  </button>
+                </div>
+              </div>
+              <div class="tableau" data-table-population></div>
+            </div>
+
+            <div class="carte" style="margin-top:1rem">
+              <div class="carte__entete">
                 <h3>Catalogue des accès</h3>
                 <p data-compte-catalogue></p>
+                <div class="carte__outils">
+                  <button type="button" class="mini" data-export-catalogue>
+                    Exporter (CSV)
+                  </button>
+                </div>
               </div>
               <div class="tableau" data-table-catalogue></div>
             </div>

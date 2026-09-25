@@ -65,6 +65,18 @@ département à la fonction fait passer de 16 à 49 équipes et de 113 à 165
 recommandations automatisables — parce que certains accès suivent le métier et
 non le rattachement.
 
+## Voir les données brutes
+
+L'onglet **Données** montre la population et le catalogue tels qu'ils sont
+entrés dans l'outil : chaque agent avec son service, sa fonction, son site, son
+responsable, et la liste exacte de ses accès en dépliant le compteur. La
+recherche porte aussi sur les codes d'accès — taper un code donne la liste de
+ses détenteurs. Les deux tables s'exportent en CSV.
+
+Un calcul d'habilitations que l'on ne peut pas recouper ne vaut rien : on doit
+pouvoir descendre de « 93 % des commerciaux détiennent cet accès » jusqu'à la
+ligne d'annuaire d'une personne.
+
 ## L'assistant de règles transverses
 
 Le minage part du découpage de l'entreprise et cherche ce qui est commun.

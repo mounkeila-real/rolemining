@@ -772,6 +772,8 @@ function rendreDonnees(et: Etat): void {
     for (const code of codes) porteurs.set(code, (porteurs.get(code) ?? 0) + 1);
   }
 
+  rendrePopulation(et);
+
   q('[data-compte-catalogue]').textContent = `${nombre(et.jeu.catalogue.length)} accès`;
   q('[data-table-catalogue]').innerHTML = `
     <table>
@@ -799,6 +801,123 @@ function rendreDonnees(et: Etat): void {
     </table>`;
 }
 
+/**
+ * Les données brutes, telles qu'elles sont entrées dans l'outil.
+ *
+ * Un calcul d'habilitations que l'on ne peut pas recouper ne vaut rien : on doit
+ * pouvoir descendre de « 93 % des commerciaux détiennent cet accès » jusqu'à la
+ * ligne d'annuaire d'une personne et la liste exacte de ses droits.
+ */
+const PLAFOND_POPULATION = 200;
+let filtrePopulation = '';
+let agentDeplie: string | null = null;
+
+function rendrePopulation(et: Etat): void {
+  const terme = filtrePopulation.trim().toLowerCase();
+  const nomDe = new Map(et.jeu.agents.map((a) => [a.sam, a.nom]));
+
+  const correspond = (sam: string) => {
+    if (terme === '') return true;
+    const a = et.jeu.agents.find((x) => x.sam === sam);
+    if (!a) return false;
+    const champs = [
+      a.sam, a.nom, a.departement, a.titre, a.site,
+      a.prestataire ? 'prestataire' : '',
+      ...(et.jeu.attributions[a.sam] ?? []),
+    ];
+    return champs.some((c) => c.toLowerCase().includes(terme));
+  };
+
+  const trouves = et.jeu.agents.filter((a) => correspond(a.sam));
+  const affiches = trouves.slice(0, PLAFOND_POPULATION);
+
+  q('[data-compte-population]').textContent =
+    trouves.length === et.jeu.agents.length
+      ? `${nombre(et.jeu.agents.length)} agents`
+      : `${nombre(trouves.length)} agents sur ${nombre(et.jeu.agents.length)}`;
+
+  q('[data-table-population]').innerHTML =
+    trouves.length === 0
+      ? '<p class="vide">Aucun agent ne correspond à cette recherche.</p>'
+      : `<table>
+          <thead><tr>
+            <th>Agent</th><th>Service</th><th>Fonction</th><th>Site</th>
+            <th>Responsable</th><th class="num">Accès</th>
+          </tr></thead>
+          <tbody>
+            ${affiches
+              .map((a) => {
+                const codes = et.jeu.attributions[a.sam] ?? [];
+                const ouvert = agentDeplie === a.sam;
+                return `<tr>
+                  <td>${e(a.nom)}<br /><code>${e(a.sam)}</code>
+                      ${a.prestataire ? '<span class="etiquette etiquette--alerte">prestataire</span>' : ''}</td>
+                  <td>${e(a.departement)}${a.accueil ? `<br /><span class="reserve" style="font-size:.74rem">accueil : ${e(a.accueil)}</span>` : ''}</td>
+                  <td>${e(a.titre)}</td>
+                  <td>${e(a.site)}</td>
+                  <td>${a.responsable ? e(nomDe.get(a.responsable) ?? a.responsable) : '<span class="reserve">racine</span>'}</td>
+                  <td class="num">
+                    <button type="button" class="detail" data-agent="${e(a.sam)}">
+                      ${nombre(codes.length)}${ouvert ? ' ▾' : ' ▸'}
+                    </button>
+                    ${ouvert ? `<p class="liste-agents" style="text-align:left">${codes.map((c) => `<code>${e(c)}</code>`).join(' · ')}</p>` : ''}
+                  </td>
+                </tr>`;
+              })
+              .join('')}
+          </tbody>
+        </table>
+        ${
+          trouves.length > affiches.length
+            ? `<p class="vide">Affichage limité aux ${nombre(PLAFOND_POPULATION)} premiers — affinez la recherche ou exportez.</p>`
+            : ''
+        }`;
+}
+
+function exporterPopulation(et: Etat): void {
+  const nomDe = new Map(et.jeu.agents.map((a) => [a.sam, a.nom]));
+  telecharger(
+    'population.csv',
+    versCsv([
+      ['Identifiant', 'Nom', 'Service', 'Fonction', 'Site', 'Responsable', 'Prestataire', 'Acces'],
+      ...et.jeu.agents.map((a) => [
+        a.sam,
+        a.nom,
+        a.departement,
+        a.titre,
+        a.site,
+        a.responsable ? (nomDe.get(a.responsable) ?? a.responsable) : '',
+        a.prestataire ? 'oui' : 'non',
+        (et.jeu.attributions[a.sam] ?? []).join(' '),
+      ]),
+    ]),
+    'text/csv',
+  );
+}
+
+function exporterCatalogue(et: Etat): void {
+  const porteurs = new Map<string, number>();
+  for (const codes of Object.values(et.jeu.attributions)) {
+    for (const code of codes) porteurs.set(code, (porteurs.get(code) ?? 0) + 1);
+  }
+  telecharger(
+    'catalogue.csv',
+    versCsv([
+      ['Code', 'Libelle', 'Application', 'Categorie', 'Sensible', 'InterditPrestataire', 'Detenteurs'],
+      ...et.jeu.catalogue.map((a) => [
+        a.code,
+        a.nom,
+        a.application,
+        a.categorie,
+        a.sensible ? '1' : '0',
+        a.interditPrestataire ? '1' : '0',
+        String(porteurs.get(a.code) ?? 0),
+      ]),
+    ]),
+    'text/csv',
+  );
+}
+
 function appliquerJeu(jeu: Jeu, origine: string): void {
   if (!etat) return;
   origineJeu = origine;
@@ -809,6 +928,8 @@ function appliquerJeu(jeu: Jeu, origine: string): void {
   deplies.clear();
   for (const critere of criteresAssistant) critere.valeurs = [];
   retenusAssistant = undefined;
+  filtrePopulation = '';
+  agentDeplie = null;
   rendreFiltresPopulation(jeu);
   rendrePickers(jeu);
   calculer();
@@ -874,6 +995,16 @@ function chargerImport(): void {
 function brancherImport(): void {
   const panneau = q<HTMLElement>('[data-panneau="donnees"]');
 
+  panneau.addEventListener('input', (ev) => {
+    const cible = ev.target;
+    if (!(cible instanceof HTMLInputElement) || cible.dataset.filtrePopulation === undefined) {
+      return;
+    }
+    filtrePopulation = cible.value;
+    agentDeplie = null;
+    if (etat) rendrePopulation(etat);
+  });
+
   panneau.addEventListener('change', (ev) => {
     const cible = ev.target;
     if (!(cible instanceof HTMLElement)) return;
@@ -905,6 +1036,23 @@ function brancherImport(): void {
       if (prestatairesImport.has(d)) prestatairesImport.delete(d);
       else prestatairesImport.add(d);
       pastille.setAttribute('aria-pressed', String(prestatairesImport.has(d)));
+      return;
+    }
+
+    const agent = cible.closest<HTMLElement>('[data-agent]');
+    if (agent?.dataset.agent !== undefined && etat) {
+      agentDeplie = agentDeplie === agent.dataset.agent ? null : agent.dataset.agent;
+      rendrePopulation(etat);
+      return;
+    }
+
+    if (cible.closest('[data-export-population]') && etat) {
+      exporterPopulation(etat);
+      return;
+    }
+
+    if (cible.closest('[data-export-catalogue]') && etat) {
+      exporterCatalogue(etat);
       return;
     }
 
